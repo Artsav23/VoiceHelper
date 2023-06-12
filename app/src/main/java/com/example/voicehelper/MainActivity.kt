@@ -10,7 +10,6 @@ import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import com.example.voicehelper.databinding.ActivityMainBinding
-import org.jetbrains.annotations.TestOnly
 import java.lang.Thread.sleep
 import java.util.Locale
 
