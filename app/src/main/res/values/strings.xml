@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Voice Helper</string>
+    <string-array name="greeting">
+        <item>привет</item>
+        <item>добрый день</item>
+        <item>приветик</item>
+        <item>здравствуй</item>
+        <item>hi</item>
+        <item>hello</item>
+        </string-array>
+</resources>
