@@ -19,22 +19,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var launcher : ActivityResultLauncher<Intent>
     private lateinit var textToSpeech: TextToSpeech
     private val wordLibrary = WordLibrary()
-    private var mediaPlayer = MediaPlayer()
+    private lateinit var viewModel: ViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        viewModel = ViewModel(binding)
         registerForActivityResult()
-        initTextToSpeech()
-    }
-
-    private fun initTextToSpeech() {
-        textToSpeech = TextToSpeech(this) {
-            if (it != TextToSpeech.ERROR) {
-                textToSpeech.language = Locale.getDefault()
-            }
-        }
+        viewModel.initTextToSpeech(context = this)
     }
 
     private fun registerForActivityResult() {
@@ -52,7 +45,7 @@ class MainActivity : AppCompatActivity() {
                 binding.imageView.setImageResource(R.drawable.cookie)
                 return
             }
-            wordLibrary.clear.any {it in text.lowercase()}-> {
+            wordLibrary.clear.any {it in text.lowercase()} -> {
                 binding.imageView.setImageDrawable(null)
                 return
             }
@@ -60,28 +53,25 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             wordLibrary.greeting.any { it == text.lowercase()}  -> {
-                textToSpeech.speak("Пока", TextToSpeech.QUEUE_FLUSH, null, null)
+                viewModel.speak("Пока")
                 sleep(500)
                 finish()
                 return
             }
             wordLibrary.music.any{music-> wordLibrary.play.any{play-> "$play $music" in text.lowercase()}} -> {
-                playMusic()
+                viewModel.playMusic(context = this)
             }
-            else -> textToSpeech.speak("Извините, не знаю такой команды", TextToSpeech.QUEUE_FLUSH, null, null)
+            else -> viewModel.speak("Извините, не знаю такой команды")
 
         }
     }
 
-    private fun playMusic() {
-        mediaPlayer = MediaPlayer.create(this, R.raw.sound0)
-        mediaPlayer.start()
+    fun onClickMicrophone(view: View) {
+        launcher.launch(viewModel.intentFromMicrophone())
     }
 
-    fun onClickMicrophone(view: View) {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-        launcher.launch(intent)
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.stopMusic()
     }
 }
