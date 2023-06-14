@@ -51,6 +51,7 @@
         android:background="@drawable/rounded_button"
         android:onClick="onClickPause"
         android:padding="13dp"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/microphonne"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
