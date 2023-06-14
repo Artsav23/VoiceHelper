@@ -1,8 +1,10 @@
 package com.example.voicehelper
 
+import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
+import android.net.Uri
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import androidx.core.view.isVisible
@@ -41,5 +43,17 @@ class ViewModel(private val binding: ActivityMainBinding) {
 
     fun stopMusic() {
         mediaPlayer.stop()
+    }
+
+    fun searchWithInternet(text: String): Intent {
+        val intent = Intent(Intent.ACTION_WEB_SEARCH)
+        intent.putExtra(SearchManager.QUERY, text)
+        return intent
+    }
+
+    fun searchWithInternetCompat(text: String): Intent {
+        val uri = Uri.parse("http://www.google.com/#q=$text")
+        val  intent = Intent(Intent.ACTION_VIEW, uri)
+        return  intent
     }
 }

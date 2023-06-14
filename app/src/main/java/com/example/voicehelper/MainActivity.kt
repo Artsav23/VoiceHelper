@@ -5,10 +5,12 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
+import java.lang.Exception
 import java.lang.Thread.sleep
 
 class MainActivity : AppCompatActivity() {
@@ -64,8 +66,28 @@ class MainActivity : AppCompatActivity() {
                 viewModel.stopMusic()
                 binding.pauseMusic.isVisible = false
                 }
-            else -> viewModel.speak("Извините, не знаю такой команды")
+            else -> {
+                viewModel.speak("Вот что удалось найти по вашему запросу")
+               connectionWithNet(text = text)
+            }
 
+        }
+    }
+
+    private fun connectionWithNet(text: String) {
+        try {
+            startActivity(viewModel.searchWithInternet(text))
+        } catch (e: Exception) {
+            connectionWithNetCompat(text = text)
+        }
+    }
+
+    private fun connectionWithNetCompat(text: String) {
+        try {
+            startActivity(viewModel.searchWithInternetCompat(text))
+        }
+        catch (e: Exception) {
+            Toast.makeText(this, "Internet connection error", Toast.LENGTH_SHORT).show()
         }
     }
 
