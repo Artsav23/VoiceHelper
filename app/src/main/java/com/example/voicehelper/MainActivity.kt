@@ -1,23 +1,19 @@
 package com.example.voicehelper
 
 import android.content.Intent
-import android.media.MediaPlayer
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.speech.RecognizerIntent
-import android.speech.tts.TextToSpeech
 import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import com.example.voicehelper.databinding.ActivityMainBinding
 import java.lang.Thread.sleep
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var launcher : ActivityResultLauncher<Intent>
-    private lateinit var textToSpeech: TextToSpeech
     private val wordLibrary = WordLibrary()
     private lateinit var viewModel: ViewModel
 
@@ -61,6 +57,10 @@ class MainActivity : AppCompatActivity() {
             wordLibrary.music.any{music-> wordLibrary.play.any{play-> "$play $music" in text.lowercase()}} -> {
                 viewModel.playMusic(context = this)
             }
+            wordLibrary.stop.any { stop -> stop in text.lowercase() || wordLibrary.music.any{music->
+                "$stop $music" in text.lowercase() } } -> {
+                    viewModel.stopMusic()
+                }
             else -> viewModel.speak("Извините, не знаю такой команды")
 
         }
