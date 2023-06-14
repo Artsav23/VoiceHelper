@@ -7,6 +7,7 @@ import android.speech.RecognizerIntent
 import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
 import java.lang.Thread.sleep
 
@@ -56,10 +57,12 @@ class MainActivity : AppCompatActivity() {
             }
             wordLibrary.music.any{music-> wordLibrary.play.any{play-> "$play $music" in text.lowercase()}} -> {
                 viewModel.playMusic(context = this)
+                binding.pauseMusic.isVisible = true
             }
             wordLibrary.stop.any { stop -> stop in text.lowercase() || wordLibrary.music.any{music->
                 "$stop $music" in text.lowercase() } } -> {
-                    viewModel.stopMusic()
+                viewModel.stopMusic()
+                binding.pauseMusic.isVisible = false
                 }
             else -> viewModel.speak("Извините, не знаю такой команды")
 
@@ -68,6 +71,11 @@ class MainActivity : AppCompatActivity() {
 
     fun onClickMicrophone(view: View) {
         launcher.launch(viewModel.intentFromMicrophone())
+    }
+
+    fun onClickPause(view: View) {
+        viewModel.stopMusic()
+        binding.pauseMusic.isVisible = false
     }
 
     override fun onDestroy() {

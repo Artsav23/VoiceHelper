@@ -5,10 +5,11 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
 import java.util.Locale
 
-class ViewModel(binding: ActivityMainBinding) {
+class ViewModel(private val binding: ActivityMainBinding) {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
 
@@ -23,6 +24,7 @@ class ViewModel(binding: ActivityMainBinding) {
         val musicList = arrayListOf(R.raw.sound0, R.raw.sound1, R.raw.sound2, R.raw.sound3, R.raw.sound4)
         mediaPlayer = MediaPlayer.create(context, musicList.random())
         mediaPlayer.start()
+        binding.pauseMusic.isVisible = true
     }
 
     fun initTextToSpeech(context: Context) {
