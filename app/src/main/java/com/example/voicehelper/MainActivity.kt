@@ -1,24 +1,18 @@
 package com.example.voicehelper
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
 import android.os.Message
 import android.speech.RecognizerIntent
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import com.bumptech.glide.Glide
 import com.example.voicehelper.databinding.ActivityMainBinding
-import org.json.JSONObject
 import java.lang.Thread.sleep
-import java.net.URL
 import kotlin.concurrent.thread
 
 
@@ -51,36 +45,43 @@ class MainActivity : AppCompatActivity() {
 
     private fun commands(text: String) {
         when {
-            wordLibrary.find.any { it in text.lowercase() } -> {
+            wordLibrary.find.any { find -> find in text.lowercase() } -> {
                 viewModel.speak("Вот что нашлось по вашему запросу")
                 connectionWithNet(text.lowercase())
             }
-            "печенье" in text.lowercase() -> {
+            wordLibrary.cookies.any { cookies -> cookies in text.lowercase() } -> {
                 binding.imageView.setImageResource(R.drawable.cookie)
                 return
             }
-            wordLibrary.clear.any {it in text.lowercase()} -> {
+            wordLibrary.clear.any {clear -> clear in text.lowercase()} -> {
                 binding.imageView.setImageDrawable(null)
                 return
             }
-            "включи фонарик" in text.lowercase() -> {
-                return
-            }
-            wordLibrary.greeting.any { it == text.lowercase()}  -> {
+            wordLibrary.flashLight.any {flashLight -> wordLibrary.play.any {play ->
+                "$play $flashLight" in text.lowercase()
+            } }  -> viewModel.turnFlashLight(this, true)
+
+            wordLibrary.greeting.any { greeting -> greeting == text.lowercase()}  -> {
                 viewModel.speak("Пока")
                 sleep(500)
                 finish()
                 return
             }
-            wordLibrary.music.any{music-> wordLibrary.play.any{play-> "$play $music" in text.lowercase()}} -> {
+            wordLibrary.music.any{music -> wordLibrary.play.any{play -> "$play $music" in text.lowercase()}} -> {
                 viewModel.playMusic(context = this)
                 binding.pauseMusic.isVisible = true
             }
-            wordLibrary.stop.any { stop -> stop in text.lowercase() || wordLibrary.music.any{music->
+            wordLibrary.stop.any { stop ->  wordLibrary.music.any{music->
                 "$stop $music" in text.lowercase() } } -> {
                 viewModel.stopMusic()
                 binding.pauseMusic.isVisible = false
                 }
+            wordLibrary.stop.any { stop -> stop in text.lowercase() } -> {
+                viewModel.turnFlashLight(this, false)
+                viewModel.stopMusic()
+                binding.pauseMusic.isVisible = false
+            }
+
             wordLibrary.gif.any{gif -> gif in text.lowercase()} -> {
                 showGif(text.lowercase())
             }

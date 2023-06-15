@@ -3,6 +3,7 @@ package com.example.voicehelper
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Looper
@@ -18,8 +19,6 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
-import java.util.logging.Handler
-import kotlin.concurrent.thread
 
 class ViewModel(private val binding: ActivityMainBinding) {
     private var mediaPlayer = MediaPlayer()
@@ -114,5 +113,11 @@ class ViewModel(private val binding: ActivityMainBinding) {
     fun searchWithInternetCompat(text: String): Intent {
         val uri = Uri.parse("http://www.google.com/#q=$text")
         return Intent(Intent.ACTION_VIEW, uri)
+    }
+
+    fun turnFlashLight(context: Context, status: Boolean) {
+        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val cameraId = cameraManager.cameraIdList[0]
+        cameraManager.setTorchMode(cameraId, status)
     }
 }
