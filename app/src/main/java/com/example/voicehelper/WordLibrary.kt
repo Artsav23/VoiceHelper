@@ -8,5 +8,5 @@ class WordLibrary {
     val music = listOf("music", "музыку", "песню", "песни", "мелодию", "мелодии")
     val stop = listOf("stop", "стоп", "пауза", "останови", "прекрати", "не надо", "выключи", "off")
     val gif = listOf("giff","giph","gif","giffs","gifs","гиф","гифф","гифы","гифку","гифка","гифки","гифы")
-    val find = listOf("найди","поиск","поищи")
+    val find = listOf("найди","поиск","поищи", "что такое")
 }

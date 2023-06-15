@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Looper
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
@@ -17,6 +18,7 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.logging.Handler
 import kotlin.concurrent.thread
 
 class ViewModel(private val binding: ActivityMainBinding) {
@@ -89,6 +91,24 @@ class ViewModel(private val binding: ActivityMainBinding) {
             connection.disconnect()
         }
         return data
+    }
+
+    fun createHandler(context: Context): android.os.Handler {
+        val handler = android.os.Handler(Looper.getMainLooper()) { message ->
+            val data = message.obj as String
+            try {
+
+                Glide.with(context).load(data).into(binding.imageView)
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    "По вашему запросу ничего не было найдено",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            true
+        }
+        return handler
     }
 
     fun searchWithInternetCompat(text: String): Intent {

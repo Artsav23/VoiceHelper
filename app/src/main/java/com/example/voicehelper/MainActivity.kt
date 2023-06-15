@@ -36,17 +36,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         viewModel = ViewModel(binding)
         registerForActivityResult()
-        initHandler()
         viewModel.initTextToSpeech(context = this)
-        showGif("gif макароны")
-    }
-
-    private fun initHandler() {
-        handler = Handler(Looper.getMainLooper()) {message ->
-            val data = message.obj as String
-            Glide.with(this).load(data).into(binding.imageView)
-            true
-        }
+        handler = viewModel.createHandler(this)
     }
 
     private fun registerForActivityResult() {
@@ -60,6 +51,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun commands(text: String) {
         when {
+            wordLibrary.find.any { it in text.lowercase() } -> {
+                viewModel.speak("Вот что нашлось по вашему запросу")
+                connectionWithNet(text.lowercase())
+            }
             "печенье" in text.lowercase() -> {
                 binding.imageView.setImageResource(R.drawable.cookie)
                 return
@@ -89,18 +84,17 @@ class MainActivity : AppCompatActivity() {
             wordLibrary.gif.any{gif -> gif in text.lowercase()} -> {
                 showGif(text.lowercase())
             }
-            else -> {
-                viewModel.speak("Вот что удалось найти по вашему запросу")
-               connectionWithNet(text = text)
-            }
+            else -> viewModel.speak("Не знаю такой команды")
+
 
         }
     }
 
     private fun showGif(text: String) {
         val  regex = Regex(wordLibrary.gif.joinToString(separator = "|", transform = Regex::escape))
-        val search = text.replace(regex, "")
-        Log.d("my_log", search)
+        var search = text.replace(regex, "")
+        if (search == "") search = "Gif"
+
         thread { val url = viewModel.createGif(search)
             val message = Message.obtain()
             message.obj = url
@@ -110,10 +104,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun connectionWithNet(text: String) {
+        val regex = Regex(wordLibrary.find.joinToString( separator = "|", transform = Regex::escape))
+        val search = text.replace(regex,"")
         try {
-            startActivity(viewModel.searchWithInternet(text))
+            startActivity(viewModel.searchWithInternet(search))
         } catch (e: Exception) {
-            connectionWithNetCompat(text = text)
+            connectionWithNetCompat(search)
         }
     }
 
