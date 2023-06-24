@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -14,6 +16,10 @@ import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 
 class MainActivity : AppCompatActivity() {
@@ -23,15 +29,73 @@ class MainActivity : AppCompatActivity() {
     private val wordLibrary = WordLibrary()
     private lateinit var viewModel: ViewModel
     private lateinit var handler: Handler
+    private lateinit var speechRecognizer: SpeechRecognizer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         viewModel = ViewModel(binding)
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         registerForActivityResult()
         viewModel.initTextToSpeech(context = this)
         handler = viewModel.createHandler(this)
+        requestMicrophonePermission()
+        speechRecognizerListener()
+    }
+
+    private fun requestMicrophonePermission() {
+        val permission = Manifest.permission.RECORD_AUDIO
+        val granted = PackageManager.PERMISSION_GRANTED
+        if (ContextCompat.checkSelfPermission(this, permission) != granted )
+            ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            } else {
+                Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun speechRecognizerListener() {
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+            }
+
+            override fun onBeginningOfSpeech() {
+            }
+
+            override fun onRmsChanged(rmsdB: Float) {
+            }
+
+            override fun onBufferReceived(buffer: ByteArray?) {
+            }
+
+            override fun onEndOfSpeech() {
+            }
+
+            override fun onError(error: Int) {
+                Toast.makeText(this@MainActivity, "1", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onResults(results: Bundle?) {
+                Toast.makeText(this@MainActivity, "2", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {
+            }
+
+            override fun onEvent(eventType: Int, params: Bundle?) {
+            }
+        })
     }
 
     private fun registerForActivityResult() {
@@ -124,7 +188,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onClickMicrophone(view: View) {
-        launcher.launch(viewModel.intentFromMicrophone())
+        speechRecognizer.startListening(viewModel.intentFromMicrophone())
     }
 
     fun onClickPause(view: View) {
