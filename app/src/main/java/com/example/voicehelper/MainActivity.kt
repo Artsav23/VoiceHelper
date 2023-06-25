@@ -1,31 +1,32 @@
 package com.example.voicehelper
 
-import android.content.Intent
+import android.Manifest
+import android.animation.ObjectAnimator
+import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.text.SpannableString
+import android.text.style.StyleSpan
+import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var launcher : ActivityResultLauncher<Intent>
     private val wordLibrary = WordLibrary()
     private lateinit var viewModel: ViewModel
     private lateinit var handler: Handler
@@ -37,11 +38,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         viewModel = ViewModel(binding)
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        registerForActivityResult()
         viewModel.initTextToSpeech(context = this)
         handler = viewModel.createHandler(this)
         requestMicrophonePermission()
         speechRecognizerListener()
+        animateText()
+    }
+
+    private fun animateText() {
+        val text = SpannableString("Hello, user \nCan I help you?")
+        text.setSpan(StyleSpan(Typeface.BOLD), 19, text.length, 0)
+        val animator = ObjectAnimator.ofInt(0, text.length)
+        animator.duration = 2000
+        animator.addUpdateListener { animation ->
+            val animatedValue = animation.animatedValue as Int
+            binding.textView.text = text.subSequence(0, animatedValue)
+        }
+        animator.start()
     }
 
     private fun requestMicrophonePermission() {
@@ -68,43 +81,30 @@ class MainActivity : AppCompatActivity() {
     private fun speechRecognizerListener() {
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
+                binding.textView.text = ""
+                binding.inputText.isInvisible = true
             }
-
-            override fun onBeginningOfSpeech() {
-            }
-
-            override fun onRmsChanged(rmsdB: Float) {
-            }
-
-            override fun onBufferReceived(buffer: ByteArray?) {
-            }
-
-            override fun onEndOfSpeech() {
-            }
-
-            override fun onError(error: Int) {
-                Toast.makeText(this@MainActivity, "1", Toast.LENGTH_SHORT).show()
-            }
-
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {}
             override fun onResults(results: Bundle?) {
-                Toast.makeText(this@MainActivity, "2", Toast.LENGTH_SHORT).show()
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!text.isNullOrEmpty()) {
+                    commands(text[0])
+                    binding.textView.text = text[0].capitalize()
+                }
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
+                val partialResult = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!partialResult.isNullOrEmpty()) {
+                    binding.textView.text = partialResult[0].capitalize()
+                }
             }
-
-            override fun onEvent(eventType: Int, params: Bundle?) {
-            }
+            override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-    }
-
-    private fun registerForActivityResult() {
-        launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (it.resultCode == RESULT_OK && it.data != null) {
-                val text = requireNotNull(it.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS))
-                commands(text[0])
-            }
-        }
     }
 
     private fun commands(text: String) {

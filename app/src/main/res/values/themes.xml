@@ -4,6 +4,6 @@
     </style>
 
     <style name="Theme.VoiceHelper" parent="Base.Theme.VoiceHelper">
-        <item name="android:statusBarColor">#1B1A1A</item>
+        <item name="android:statusBarColor">@color/black</item>
     </style>
 </resources>
