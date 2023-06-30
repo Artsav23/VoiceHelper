@@ -1,14 +1,19 @@
 package com.example.voicehelper
 
+import android.animation.ObjectAnimator
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Looper
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.text.SpannableString
+import android.text.style.StyleSpan
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
@@ -24,6 +29,8 @@ class ViewModel(private val binding: ActivityMainBinding) {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
     private val apiKey = "JnoqxlzqBsM6e41fpdhzDnJ1qAPzsuwq"
+    private val text = SpannableString("Hello, user \nCan I help you?")
+    private val animator = ObjectAnimator.ofInt(0, text.length)
 
     fun intentFromMicrophone(): Intent {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -31,6 +38,21 @@ class ViewModel(private val binding: ActivityMainBinding) {
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         return intent
+    }
+
+    fun animateText(textView: TextView) {
+        text.setSpan(StyleSpan(Typeface.BOLD), 19, text.length, 0)
+        animator.duration = 2000
+        animator.addUpdateListener { animation ->
+            val animatedValue = animation.animatedValue as Int
+            textView.text = text.subSequence(0, animatedValue)
+        }
+        animator.start()
+    }
+
+
+    fun animateTextStop() {
+        animator.cancel()
     }
 
     fun playMusic(context: Context) {
