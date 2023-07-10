@@ -1,5 +1,7 @@
 package com.example.voicehelper
 
+const val API_KEY = "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"
+const val API_URL = "https://api.openai.com/v1/chat/completions"
 class WordLibrary {
     val greeting = listOf("привет", "добрый день", "приветик", "hello",
         "hi", "здравствуй")

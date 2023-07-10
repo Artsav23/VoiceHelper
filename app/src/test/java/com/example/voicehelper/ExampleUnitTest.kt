@@ -1,5 +1,10 @@
 package com.example.voicehelper
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -13,5 +18,41 @@ class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
+    }
+
+    @Test
+    fun chatGpt() {
+        val apiKey = "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"
+        val apiUrl = "https://api.openai.com/v1/chat/completions"
+
+        val httpClient = OkHttpClient()
+
+        val requestBody = """
+        {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Когда родился лукашенко"}
+            ]
+        }
+    """.trimIndent()
+
+        val request = Request.Builder()
+            .url(apiUrl)
+            .post(requestBody.toRequestBody("application/json".toMediaType()))
+            .header("Authorization", "Bearer $apiKey")
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        val responseBody = response.body?.string()
+
+        if (response.isSuccessful) {
+            val responseJSON = JSONObject(responseBody)
+            val answer = responseJSON.getJSONArray("choices").getJSONObject(0).getString("content")
+            println(answer)
+        } else {
+            // Обработка ошибки при запросе к API
+            println("Ошибка при выполнении запроса: ${response.code} - ${responseBody}")
+        }
     }
 }

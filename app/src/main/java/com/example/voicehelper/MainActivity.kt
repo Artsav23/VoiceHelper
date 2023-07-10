@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Message
 import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +16,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 
@@ -122,11 +130,11 @@ class MainActivity : AppCompatActivity() {
                 finish()
                 return
             }
-            wordLibrary.music.any{music -> wordLibrary.play.any{play -> "$play $music" in text.lowercase()}} -> {
+            wordLibrary.music.any{music -> wordLibrary.play.any{ play -> "$play $music" in text.lowercase()}} -> {
                 viewModel.playMusic(context = this)
                 binding.pauseMusic.isVisible = true
             }
-            wordLibrary.stop.any { stop ->  wordLibrary.music.any{music->
+            wordLibrary.stop.any { stop ->  wordLibrary.music.any{ music ->
                 "$stop $music" in text.lowercase() } } -> {
                 viewModel.stopMusic()
                 binding.pauseMusic.isVisible = false
@@ -140,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             wordLibrary.gif.any{gif -> gif in text.lowercase()} -> {
                 showGif(text.lowercase())
             }
-            else -> viewModel.speak("Не знаю такой команды")
+            else -> createAnswer(text)
 
 
         }
@@ -191,5 +199,36 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.stopMusic()
+    }
+
+    private fun createAnswer(text: String) {
+        GlobalScope.launch {
+            val apiKey = "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"
+            val apiUrl = "https://api.openai.com/v1/chat/completions"
+            val httpClient = OkHttpClient()
+            val requestBody = """{ "model": "gpt-3.5-turbo", "messages": 
+            [ {"role": "system", "content": "You are a helpful assistant."},
+{"role": "user", "content": "$text"}]}""".trimIndent()
+            val request = Request.Builder()
+                .url(apiUrl)
+                .post(requestBody.toRequestBody("application/json".toMediaType()))
+                .header("Authorization", "Bearer $apiKey")
+                .build()
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string()
+            if (response.isSuccessful) {
+                val responseJSON = JSONObject(responseBody)
+                val answer = responseJSON.getJSONArray("choices")
+                    .getJSONObject(0)
+                    .getJSONObject("message")
+                    .getString("content")
+                runOnUiThread { binding.inputText.text = answer
+                binding.inputText.isVisible = true }
+            } else {
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity,
+                        "Ошибка при выполнении запроса: ${response.code} - ${responseBody}", Toast.LENGTH_SHORT).show()}
+            }
+        }
     }
 }
