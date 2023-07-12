@@ -159,7 +159,9 @@ class MainActivity : AppCompatActivity() {
         var search = text.replace(regex, "")
         if (search == "") search = "Gif"
 
-        thread { val url = viewModel.createGif(search)
+        thread {
+            val apiKey = resources.getString(R.string.API_KEY_GIF)
+            val url = viewModel.createGif(search, apiKey)
             val message = Message.obtain()
             message.obj = url
             handler.sendMessage(message)
@@ -203,16 +205,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun createAnswer(text: String) {
         GlobalScope.launch {
-            val apiKey = "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"
-            val apiUrl = "https://api.openai.com/v1/chat/completions"
             val httpClient = OkHttpClient()
             val requestBody = """{ "model": "gpt-3.5-turbo", "messages": 
             [ {"role": "system", "content": "You are a helpful assistant."},
 {"role": "user", "content": "$text"}]}""".trimIndent()
             val request = Request.Builder()
-                .url(apiUrl)
+                .url(API_URL)
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
-                .header("Authorization", "Bearer $apiKey")
+                .header("Authorization", "Bearer ${resources.getString(R.string.API_KEY_OPEN_AI)}")
                 .build()
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string()

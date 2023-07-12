@@ -27,8 +27,6 @@ class LineSoundView(context: Context, attributeSet: AttributeSet?): View(context
         canvas?.drawColor(Color.BLACK)
         repeat(3) {
             canvas?.drawPath(drawLineVolumeUp(centerY, it), paint)
-        }
-        repeat(3) {
             canvas?.drawPath(drawLineVolumeDown(centerY, it), paint)
         }
     }
