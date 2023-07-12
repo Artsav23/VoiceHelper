@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.os.Looper
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -28,7 +29,6 @@ import java.util.Locale
 class ViewModel(private val binding: ActivityMainBinding) {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
-    private val apiKey = "JnoqxlzqBsM6e41fpdhzDnJ1qAPzsuwq"
     private val text = SpannableString("Hello, user \nCan I help you?")
     private val animator = ObjectAnimator.ofInt(0, text.length)
 
@@ -83,8 +83,8 @@ class ViewModel(private val binding: ActivityMainBinding) {
         intent.putExtra(SearchManager.QUERY, text)
         return intent
     }
-    fun createGif(text: String) : String {
-        val jsonString = response(text)
+    fun createGif(text: String, apiKey: String) : String {
+        val jsonString = response(text, apiKey)
         val jsonObject = JSONObject(jsonString)
         val url = jsonObject.getJSONArray("data")
             .getJSONObject(0)
@@ -94,7 +94,7 @@ class ViewModel(private val binding: ActivityMainBinding) {
         return url
     }
 
-    private fun response(text: String): String {
+    private fun response(text: String, apiKey: String): String {
         val url = URL("https://api.giphy.com/v1/gifs/search?api_key=$apiKey&q=$text")
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
