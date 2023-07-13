@@ -49,7 +49,6 @@ class MainActivity : AppCompatActivity() {
         requestMicrophonePermission()
         speechRecognizerListener()
         viewModel.animateText(binding.textView)
-        createAnswer("напиши 100 слов на тему перФЕКЦИОНИЗМ")
     }
 
     private fun requestMicrophonePermission() {
