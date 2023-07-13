@@ -24,6 +24,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.lang.Thread.sleep
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         requestMicrophonePermission()
         speechRecognizerListener()
         viewModel.animateText(binding.textView)
+        createAnswer("напиши 100 слов на тему перФЕКЦИОНИЗМ")
     }
 
     private fun requestMicrophonePermission() {
@@ -205,29 +207,45 @@ class MainActivity : AppCompatActivity() {
 
     private fun createAnswer(text: String) {
         GlobalScope.launch {
-            val httpClient = OkHttpClient()
-            val requestBody = """{ "model": "gpt-3.5-turbo", "messages": 
+            try {
+                val httpClient = OkHttpClient.Builder()
+                    .callTimeout(180, TimeUnit.SECONDS)
+                    .readTimeout(180, TimeUnit.SECONDS)
+                    .writeTimeout(180, TimeUnit.SECONDS)
+                    .build()
+                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": 
             [ {"role": "system", "content": "You are a helpful assistant."},
 {"role": "user", "content": "$text"}]}""".trimIndent()
-            val request = Request.Builder()
-                .url(API_URL)
-                .post(requestBody.toRequestBody("application/json".toMediaType()))
-                .header("Authorization", "Bearer ${resources.getString(R.string.API_KEY_OPEN_AI)}")
-                .build()
-            val response = httpClient.newCall(request).execute()
-            val responseBody = response.body?.string()
-            if (response.isSuccessful) {
-                val responseJSON = JSONObject(responseBody)
-                val answer = responseJSON.getJSONArray("choices")
-                    .getJSONObject(0)
-                    .getJSONObject("message")
-                    .getString("content")
-                runOnUiThread { binding.inputText.text = answer
-                binding.inputText.isVisible = true }
-            } else {
+                val request = Request.Builder()
+                    .url(API_URL)
+                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                    .header("Authorization", "Bearer ${resources.getString(R.string.API_KEY_OPEN_AI)}")
+                    .build()
+                val response = httpClient.newCall(request).execute()
+                val responseBody = response.body?.string()
+
+                if (response.isSuccessful) {
+                    val responseJSON = JSONObject(responseBody)
+                    val answer = responseJSON.getJSONArray("choices")
+                        .getJSONObject(0)
+                        .getJSONObject("message")
+                        .getString("content")
+                    runOnUiThread {
+                        binding.inputText.text = answer
+                        Log.d("my_log", answer.toString())
+                        binding.inputText.isVisible = true
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity,
+                            "Ошибка при выполнении запроса: ${response.code} - ${responseBody}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
                 runOnUiThread {
                     Toast.makeText(this@MainActivity,
-                        "Ошибка при выполнении запроса: ${response.code} - ${responseBody}", Toast.LENGTH_SHORT).show()}
+                        "Что-то пошло не так, повторите пожалуйста запрос позже", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
