@@ -31,21 +31,18 @@ import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val wordLibrary = WordLibrary()
     private lateinit var viewModel: ViewModel
     private lateinit var handler: Handler
-    private lateinit var speechRecognizer: SpeechRecognizer
-    private lateinit var lineSoundView: LineSoundView
+    private val wordLibrary = WordLibrary()
+    private var speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        viewModel = ViewModel(binding)
-        lineSoundView = LineSoundView(this, null)
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        viewModel = ViewModel()
         viewModel.initTextToSpeech(context = this)
-        handler = viewModel.createHandler(this)
+        handler = viewModel.createHandler(this, binding.imageView)
         requestMicrophonePermission()
         speechRecognizerListener()
         viewModel.animateText(binding.textView)
@@ -58,11 +55,8 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>,
+        grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -108,33 +102,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun commands(text: String) {
-        when {
-            wordLibrary.find.any { find -> find in text.lowercase() } -> findWithGoogle(text)
+        wordLibrary.apply {
+            when {
+                find.any { find -> find in text.lowercase() } -> findWithGoogle(text)
 
-            wordLibrary.cookies.any { cookies -> cookies in text.lowercase() } ->
-                binding.imageView.setImageResource(R.drawable.cookie)
+                cookies.any { cookies -> cookies in text.lowercase() } -> binding.imageView.setImageResource(R.drawable.cookie)
 
-            wordLibrary.clear.any { clear -> clear in text.lowercase()} -> binding.imageView.setImageDrawable(null)
+                clear.any { clear -> clear in text.lowercase() } -> binding.imageView.setImageDrawable(null)
 
-            wordLibrary.flashLight.any { flashLight -> wordLibrary.play.any {play -> "$play " +
-                    flashLight in text.lowercase() } }  -> viewModel.turnFlashLight(this, true)
+                flashLight.any { flashLight -> wordLibrary.play.any { play -> "$play " +
+                        flashLight in text.lowercase() } }  -> viewModel.turnFlashLight(this@MainActivity, true)
 
-            wordLibrary.greeting.any { greeting -> greeting == text.lowercase()}  -> bye()
+                greeting.any { greeting -> greeting == text.lowercase() }  -> bye()
 
-            wordLibrary.music.any{ music -> wordLibrary.play.any{ play -> "$play $music" in text.lowercase()}} -> playMusic()
+                music.any { music -> wordLibrary.play.any { play -> "$play $music" in text.lowercase() }} -> playMusic()
 
-            wordLibrary.stop.any { stop -> stop in text.lowercase() } -> stopAll()
+                stop.any { stop -> stop in text.lowercase() } -> stopAll()
 
-            wordLibrary.gif.any { gif -> gif in text.lowercase()} -> showGif(text.lowercase())
+                gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
 
-            else -> createAnswer(text)
-
-
+                else -> createAnswer(text)
+            }
         }
     }
 
     private fun playMusic() {
-        viewModel.playMusic(context = this)
+        viewModel.playMusic(context = this, binding.pauseMusic)
         binding.pauseMusic.isVisible = true
     }
 
@@ -199,11 +192,6 @@ class MainActivity : AppCompatActivity() {
         binding.pauseMusic.isVisible = false
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        viewModel.stopMusic()
-    }
-
     private fun createAnswer(text: String) {
         GlobalScope.launch {
             try {
@@ -212,12 +200,10 @@ class MainActivity : AppCompatActivity() {
                     .readTimeout(180, TimeUnit.SECONDS)
                     .writeTimeout(180, TimeUnit.SECONDS)
                     .build()
-                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": 
-            [ {"role": "system", "content": "You are a helpful assistant."},
-{"role": "user", "content": "$text"}]}""".trimIndent()
+                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
+                     "You are a helpful assistant."},{"role": "user", "content": "$text"}]}""".trimIndent()
                 val request = Request.Builder()
-                    .url(API_URL)
-                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                    .url(API_URL).post(requestBody.toRequestBody("application/json".toMediaType()))
                     .header("Authorization", "Bearer ${resources.getString(R.string.API_KEY_OPEN_AI)}")
                     .build()
                 val response = httpClient.newCall(request).execute()
@@ -237,7 +223,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     runOnUiThread {
                         Toast.makeText(this@MainActivity,
-                            "Ошибка при выполнении запроса: ${response.code} - ${responseBody}", Toast.LENGTH_SHORT).show()
+                            "Ошибка при выполнении запроса: ${response.code} - $responseBody", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
@@ -247,5 +233,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.stopMusic()
     }
 }

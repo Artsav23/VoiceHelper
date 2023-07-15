@@ -8,17 +8,16 @@ import android.graphics.Typeface
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
 import android.net.Uri
-import android.os.Build
 import android.os.Looper
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.text.SpannableString
 import android.text.style.StyleSpan
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
-import com.example.voicehelper.databinding.ActivityMainBinding
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -26,7 +25,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 
-class ViewModel(private val binding: ActivityMainBinding) {
+class ViewModel() {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
     private val text = SpannableString("Hello, user \nCan I help you?")
@@ -55,11 +54,11 @@ class ViewModel(private val binding: ActivityMainBinding) {
         animator.cancel()
     }
 
-    fun playMusic(context: Context) {
+    fun playMusic(context: Context, button: ImageView) {
         val musicList = arrayListOf(R.raw.sound0, R.raw.sound1, R.raw.sound2, R.raw.sound3, R.raw.sound4)
         mediaPlayer = MediaPlayer.create(context, musicList.random())
         mediaPlayer.start()
-        binding.pauseMusic.isVisible = true
+        button.isVisible = true
     }
 
     fun initTextToSpeech(context: Context) {
@@ -115,12 +114,12 @@ class ViewModel(private val binding: ActivityMainBinding) {
         return data
     }
 
-    fun createHandler(context: Context): android.os.Handler {
+    fun createHandler(context: Context, imageView: ImageView): android.os.Handler {
         val handler = android.os.Handler(Looper.getMainLooper()) { message ->
             val data = message.obj as String
             try {
 
-                Glide.with(context).load(data).into(binding.imageView)
+                Glide.with(context).load(data).into(imageView)
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
