@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 1) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             } else {
-                Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Разрешите доступ к микрофону", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -109,50 +109,50 @@ class MainActivity : AppCompatActivity() {
 
     private fun commands(text: String) {
         when {
-            wordLibrary.find.any { find -> find in text.lowercase() } -> {
-                viewModel.speak("Вот что нашлось по вашему запросу")
-                connectionWithNet(text.lowercase())
-            }
-            wordLibrary.cookies.any { cookies -> cookies in text.lowercase() } -> {
+            wordLibrary.find.any { find -> find in text.lowercase() } -> findWithGoogle(text)
+
+            wordLibrary.cookies.any { cookies -> cookies in text.lowercase() } ->
                 binding.imageView.setImageResource(R.drawable.cookie)
-                return
-            }
-            wordLibrary.clear.any {clear -> clear in text.lowercase()} -> {
-                binding.imageView.setImageDrawable(null)
-                return
-            }
-            wordLibrary.flashLight.any {flashLight -> wordLibrary.play.any {play ->
-                "$play $flashLight" in text.lowercase()
-            } }  -> viewModel.turnFlashLight(this, true)
 
-            wordLibrary.greeting.any { greeting -> greeting == text.lowercase()}  -> {
-                viewModel.speak("Пока")
-                sleep(500)
-                finish()
-                return
-            }
-            wordLibrary.music.any{music -> wordLibrary.play.any{ play -> "$play $music" in text.lowercase()}} -> {
-                viewModel.playMusic(context = this)
-                binding.pauseMusic.isVisible = true
-            }
-            wordLibrary.stop.any { stop ->  wordLibrary.music.any{ music ->
-                "$stop $music" in text.lowercase() } } -> {
-                viewModel.stopMusic()
-                binding.pauseMusic.isVisible = false
-                }
-            wordLibrary.stop.any { stop -> stop in text.lowercase() } -> {
-                viewModel.turnFlashLight(this, false)
-                viewModel.stopMusic()
-                binding.pauseMusic.isVisible = false
-            }
+            wordLibrary.clear.any { clear -> clear in text.lowercase()} -> binding.imageView.setImageDrawable(null)
 
-            wordLibrary.gif.any{gif -> gif in text.lowercase()} -> {
-                showGif(text.lowercase())
-            }
+            wordLibrary.flashLight.any { flashLight -> wordLibrary.play.any {play -> "$play " +
+                    flashLight in text.lowercase() } }  -> viewModel.turnFlashLight(this, true)
+
+            wordLibrary.greeting.any { greeting -> greeting == text.lowercase()}  -> bye()
+
+            wordLibrary.music.any{ music -> wordLibrary.play.any{ play -> "$play $music" in text.lowercase()}} -> playMusic()
+
+            wordLibrary.stop.any { stop -> stop in text.lowercase() } -> stopAll()
+
+            wordLibrary.gif.any { gif -> gif in text.lowercase()} -> showGif(text.lowercase())
+
             else -> createAnswer(text)
 
 
         }
+    }
+
+    private fun playMusic() {
+        viewModel.playMusic(context = this)
+        binding.pauseMusic.isVisible = true
+    }
+
+    private fun findWithGoogle(text: String) {
+        viewModel.speak("Вот что нашлось по вашему запросу")
+        connectionWithNet(text.lowercase())
+    }
+
+    private fun stopAll() {
+        viewModel.turnFlashLight(this, false)
+        viewModel.stopMusic()
+        binding.pauseMusic.isVisible = false
+    }
+
+    private fun bye() {
+        viewModel.speak("Пока")
+        sleep(500)
+        finish()
     }
 
     private fun showGif(text: String) {
