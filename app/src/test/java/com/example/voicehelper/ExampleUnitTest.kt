@@ -55,4 +55,36 @@ class ExampleUnitTest {
             println("Ошибка при выполнении запроса: ${response.code} - ${responseBody}")
         }
     }
+
+    @Test
+    fun minFun() {
+        val input = readLine()!!.split(" ").map { it.toInt() }
+        val n = input[0]
+        val t = input[1]
+
+        var minJoy = Int.MAX_VALUE
+
+        repeat(n) {
+            val k = readLine()!!.toInt()
+            val gifts = readLine()!!.split(" ").map { it.toInt() }
+
+            val sortedGifts = gifts.sorted()
+
+            var totalCost = 0
+            var totalJoy = 0
+
+            for (i in 0 until k) {
+                if (totalCost + sortedGifts[i] <= t) {
+                    totalCost += sortedGifts[i]
+                    totalJoy += sortedGifts[i]
+                } else {
+                    break
+                }
+            }
+
+            minJoy = minOf(minJoy, totalJoy)
+        }
+
+        println(minJoy)
+    }
 }

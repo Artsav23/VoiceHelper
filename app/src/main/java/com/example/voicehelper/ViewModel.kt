@@ -54,11 +54,10 @@ class ViewModel() {
         animator.cancel()
     }
 
-    fun playMusic(context: Context, button: ImageView) {
+    fun playMusic(context: Context) {
         val musicList = arrayListOf(R.raw.sound0, R.raw.sound1, R.raw.sound2, R.raw.sound3, R.raw.sound4)
         mediaPlayer = MediaPlayer.create(context, musicList.random())
         mediaPlayer.start()
-        button.isVisible = true
     }
 
     fun initTextToSpeech(context: Context) {

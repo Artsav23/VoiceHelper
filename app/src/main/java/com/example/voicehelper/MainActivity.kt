@@ -75,12 +75,15 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {
-                binding.lineSound.startAnimation(rmsdB * 5)
+                binding.lineSound.startAnimation(rmsdB)
+                binding.buttonSoundView.startAnimation(rmsdB)
             }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
                 binding.lineSound.isInvisible = true
+                binding.buttonSoundView.isInvisible = true
+
             }
             override fun onResults(results: Bundle?) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -89,6 +92,7 @@ class MainActivity : AppCompatActivity() {
                     binding.textView.text = text[0].capitalize()
                 }
                 binding.lineSound.isInvisible = true
+                binding.buttonSoundView.isInvisible = true
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -127,7 +131,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playMusic() {
-        viewModel.playMusic(context = this, binding.pauseMusic)
+        viewModel.playMusic(context = this)
         binding.pauseMusic.isVisible = true
     }
 
@@ -185,11 +189,12 @@ class MainActivity : AppCompatActivity() {
     fun onClickMicrophone(view: View) {
         speechRecognizer.startListening(viewModel.intentFromMicrophone())
         binding.lineSound.isVisible = true
+        binding.buttonSoundView.isVisible = true
     }
 
     fun onClickPause(view: View) {
-        viewModel.stopMusic()
         binding.pauseMusic.isVisible = false
+        viewModel.stopMusic()
     }
 
     private fun createAnswer(text: String) {

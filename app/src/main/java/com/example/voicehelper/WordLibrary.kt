@@ -2,8 +2,7 @@ package com.example.voicehelper
 
 const val API_URL = "https://api.openai.com/v1/chat/completions"
 class WordLibrary {
-    val greeting = listOf("привет", "добрый день", "приветик", "hello",
-        "hi", "здравствуй")
+    val greeting = listOf("привет", "добрый день", "приветик", "hello", "hi", "здравствуй")
     val clear = listOf("убери","очисти","убрать","очистить","стери","стереть")
     val play = listOf("включи", "врубай", "сыграй", "play", "включай")
     val music = listOf("music", "музыку", "песню", "песни", "мелодию", "мелодии")
