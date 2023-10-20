@@ -6,4 +6,7 @@
     <style name="Theme.VoiceHelper" parent="Base.Theme.VoiceHelper">
         <item name="android:statusBarColor">@color/black</item>
     </style>
+    <style name="AppThemeWithToolbar" parent="Theme.AppCompat.Light">
+    <item name="windowNoTitle">true</item>
+    </style>
 </resources>

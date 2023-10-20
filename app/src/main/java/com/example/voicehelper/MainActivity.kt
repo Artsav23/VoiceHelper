@@ -1,15 +1,17 @@
 package com.example.voicehelper
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
-import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -18,23 +20,19 @@ import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityMainBinding
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.lang.Thread.sleep
-import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
-
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: ViewModel
     private lateinit var handler: Handler
+    private lateinit var launcher: ActivityResultLauncher<Intent>
     private val wordLibrary = WordLibrary()
     private var speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+    private var stoppedListen = false
+    private var listCommand = mutableListOf<QuestionAndAnswerDataClass>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +43,16 @@ class MainActivity : AppCompatActivity() {
         handler = viewModel.createHandler(this, binding.imageView)
         requestMicrophonePermission()
         speechRecognizerListener()
+        registerForActivityResultLauncher()
         viewModel.animateText(binding.textView)
+    }
+
+    private fun registerForActivityResultLauncher() {
+        launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == RESULT_OK) {
+                listCommand = it.data?.getSerializableExtra("mutableList") as MutableList<QuestionAndAnswerDataClass>
+            }
+        }
     }
 
     private fun requestMicrophonePermission() {
@@ -55,14 +62,12 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>,
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
         grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            } else {
+            if (grantResults.isEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED)
                 Toast.makeText(this, "Разрешите доступ к микрофону", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
@@ -83,8 +88,9 @@ class MainActivity : AppCompatActivity() {
             override fun onError(error: Int) {
                 binding.lineSound.isInvisible = true
                 binding.buttonSoundView.isInvisible = true
-
+                stoppedListen = false
             }
+
             override fun onResults(results: Bundle?) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!text.isNullOrEmpty()) {
@@ -93,43 +99,65 @@ class MainActivity : AppCompatActivity() {
                 }
                 binding.lineSound.isInvisible = true
                 binding.buttonSoundView.isInvisible = true
+                stoppedListen = false
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
                 val partialResult = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!partialResult.isNullOrEmpty()) {
-                    binding.textView.text = partialResult[0].capitalize()
-                }
+                if (!partialResult.isNullOrEmpty())  binding.textView.text = partialResult[0].capitalize()
+
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
     }
 
     private fun commands(text: String) {
-        wordLibrary.apply {
-            when {
-                find.any { find -> find in text.lowercase() } -> findWithGoogle(text)
+        if (stoppedListen) {
+            stoppedListen = false
+            wordLibrary.apply {
+                when {
+                    answerUserQuestion(text = text) -> return
+                    find.any { find -> find in text.lowercase() } -> findWithGoogle(text)
 
-                cookies.any { cookies -> cookies in text.lowercase() } -> binding.imageView.setImageResource(R.drawable.cookie)
+                    cookies.any { cookies -> cookies in text.lowercase() } -> binding.imageView.setImageResource(R.drawable.cookie)
 
-                clear.any { clear -> clear in text.lowercase() } -> binding.imageView.setImageDrawable(null)
+                    clear.any { clear -> clear in text.lowercase() } -> binding.imageView.setImageDrawable(null)
 
-                flashLight.any { flashLight -> wordLibrary.play.any { play -> "$play " +
-                        flashLight in text.lowercase() } }  -> viewModel.turnFlashLight(this@MainActivity, true)
+                    flashLight.any { flashLight -> wordLibrary.play.any { play -> "$play " +
+                            flashLight in text.lowercase() } }  -> viewModel.turnFlashLight(this@MainActivity, true)
 
-                greeting.any { greeting -> greeting == text.lowercase() }  -> bye()
+                    greeting.any { greeting -> greeting == text.lowercase() }  -> bye()
 
-                music.any { music -> wordLibrary.play.any { play -> "$play $music" in text.lowercase() }} -> playMusic()
+                    music.any { music -> wordLibrary.play.any { play -> "$play $music" in text.lowercase() }} -> playMusic()
 
-                stop.any { stop -> stop in text.lowercase() } -> stopAll()
+                    stop.any { stop -> stop in text.lowercase() } -> {
+                        viewModel.stopAll(this@MainActivity)
+                        binding.pauseMusic.isVisible = false
+                    }
 
-                gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
+                    gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
 
-                else -> createAnswer(text)
+                    else -> getAnswerInOpenAI(text)
+                }
             }
         }
+        else {
+            stoppedListen = true
+        }
     }
-
+    private fun answerUserQuestion(text: String): Boolean {
+        var flag = false
+            for (i in 0 until listCommand.count()) {
+                if (text.lowercase() == listCommand[i].question.trim().lowercase() ||
+                    ("$text.").lowercase() == listCommand[i].question.trim().lowercase()) {
+                    flag = true
+                    viewModel.speak(listCommand[i].answer)
+                    binding.inputText.isVisible = true
+                    binding.inputText.text = listCommand[i].answer
+                }
+            }
+        return flag
+    }
     private fun playMusic() {
         viewModel.playMusic(context = this)
         binding.pauseMusic.isVisible = true
@@ -138,12 +166,6 @@ class MainActivity : AppCompatActivity() {
     private fun findWithGoogle(text: String) {
         viewModel.speak("Вот что нашлось по вашему запросу")
         connectionWithNet(text.lowercase())
-    }
-
-    private fun stopAll() {
-        viewModel.turnFlashLight(this, false)
-        viewModel.stopMusic()
-        binding.pauseMusic.isVisible = false
     }
 
     private fun bye() {
@@ -187,51 +209,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onClickMicrophone(view: View) {
-        speechRecognizer.startListening(viewModel.intentFromMicrophone())
+        if (!stoppedListen) {
+            stoppedListen = true
+            speechRecognizer.startListening(viewModel.intentFromMicrophone())
+        }
+        else {
+            stoppedListen = false
+            speechRecognizer.stopListening()
+        }
+        viewModel.stopSpeak()
+        viewModel.stopMusic()
         binding.lineSound.isVisible = true
         binding.buttonSoundView.isVisible = true
+
     }
 
     fun onClickPause(view: View) {
         binding.pauseMusic.isVisible = false
         viewModel.stopMusic()
     }
+    fun onClickAddAnswer(view: View) {
+        launcher.launch(Intent(this, AnswerUserActivity::class.java))
+    }
 
-    private fun createAnswer(text: String) {
+    private fun getAnswerInOpenAI(text: String) {
         GlobalScope.launch {
-            try {
-                val httpClient = OkHttpClient.Builder()
-                    .callTimeout(180, TimeUnit.SECONDS)
-                    .readTimeout(180, TimeUnit.SECONDS)
-                    .writeTimeout(180, TimeUnit.SECONDS)
-                    .build()
-                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
-                     "You are a helpful assistant."},{"role": "user", "content": "$text"}]}""".trimIndent()
-                val request = Request.Builder()
-                    .url(API_URL).post(requestBody.toRequestBody("application/json".toMediaType()))
-                    .header("Authorization", "Bearer ${resources.getString(R.string.API_KEY_OPEN_AI)}")
-                    .build()
-                val response = httpClient.newCall(request).execute()
-                val responseBody = response.body?.string()
-
-                if (response.isSuccessful) {
-                    val responseJSON = JSONObject(responseBody)
-                    val answer = responseJSON.getJSONArray("choices")
-                        .getJSONObject(0)
-                        .getJSONObject("message")
-                        .getString("content")
-                    runOnUiThread {
-                        binding.inputText.text = answer
-                        Log.d("my_log", answer.toString())
-                        binding.inputText.isVisible = true
-                    }
-                } else {
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity,
-                            "Ошибка при выполнении запроса: ${response.code} - $responseBody", Toast.LENGTH_SHORT).show()
-                    }
+            val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI))
+            if (answer != "false")
+            {
+                runOnUiThread {
+                    viewModel.speak(answer)
+                    binding.inputText.text = answer
+                    binding.inputText.isVisible = true
                 }
-            } catch (e: Exception) {
+            }
+            else {
                 runOnUiThread {
                     Toast.makeText(this@MainActivity,
                         "Что-то пошло не так, повторите пожалуйста запрос позже", Toast.LENGTH_SHORT).show()

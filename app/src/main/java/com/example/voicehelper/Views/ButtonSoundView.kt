@@ -55,19 +55,6 @@ class ButtonSoundView (context: Context, attributeSet: AttributeSet): View(conte
                 soundVolume = animation.animatedValue as Float
                 invalidate()
             }
-            animator.addListener(object : AnimatorListenerAdapter() {
-//                override fun onAnimationEnd(animation: Animator) {
-//                    super.onAnimationEnd(animation)
-////                    Handler().postDelayed({ isAnimationRunning = false
-////                        val resetAnimator = ValueAnimator.ofFloat(soundVolume, 1f)
-////                        resetAnimator.duration = 150
-////                        resetAnimator.addUpdateListener { animation ->
-////                            soundVolume = animation.animatedValue as Float
-////                            invalidate()
-////                        }
-////                        resetAnimator.start()}, 50)
-//                }
-            })
             animator.repeatCount = ValueAnimator.INFINITE
             animator.repeatMode = ValueAnimator.REVERSE
             animator.start()

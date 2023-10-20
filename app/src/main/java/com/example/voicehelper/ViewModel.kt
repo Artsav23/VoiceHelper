@@ -18,12 +18,19 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class ViewModel() {
     private var mediaPlayer = MediaPlayer()
@@ -71,9 +78,17 @@ class ViewModel() {
     fun speak(text: String) {
         textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
+    fun stopSpeak() {
+        textToSpeech.stop()
+    }
 
     fun stopMusic() {
         mediaPlayer.stop()
+    }
+
+    fun stopAll(context: Context) {
+        turnFlashLight(context, false)
+        stopMusic()
     }
 
     fun searchWithInternet(text: String): Intent {
@@ -117,14 +132,9 @@ class ViewModel() {
         val handler = android.os.Handler(Looper.getMainLooper()) { message ->
             val data = message.obj as String
             try {
-
                 Glide.with(context).load(data).into(imageView)
             } catch (e: Exception) {
-                Toast.makeText(
-                    context,
-                    "По вашему запросу ничего не было найдено",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "По вашему запросу ничего не было найдено", Toast.LENGTH_SHORT).show()
             }
             true
         }
@@ -140,5 +150,35 @@ class ViewModel() {
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         val cameraId = cameraManager.cameraIdList[0]
         cameraManager.setTorchMode(cameraId, status)
+    }
+    fun createAnswer(text: String, apiKeyOpenAI: String): String {
+            try {
+                val httpClient = OkHttpClient.Builder()
+                    .callTimeout(180, TimeUnit.SECONDS)
+                    .readTimeout(180, TimeUnit.SECONDS)
+                    .writeTimeout(180, TimeUnit.SECONDS)
+                    .build()
+                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
+                     "You are a helpful assistant."},{"role": "user", "content": "$text"}]}""".trimIndent()
+                val request = Request.Builder()
+                    .url(API_URL).post(requestBody.toRequestBody("application/json".toMediaType()))
+                    .header("Authorization", "Bearer $apiKeyOpenAI")
+                    .build()
+                val response = httpClient.newCall(request).execute()
+                val responseBody = response.body?.string()
+
+                if (response.isSuccessful) {
+                    val responseJSON = JSONObject(responseBody)
+                    val answer = responseJSON.getJSONArray("choices")
+                        .getJSONObject(0)
+                        .getJSONObject("message")
+                        .getString("content")
+                    return answer
+                } else {
+                    return "false"
+                }
+            } catch (e: Exception) {
+                return "false"
+            }
     }
 }
