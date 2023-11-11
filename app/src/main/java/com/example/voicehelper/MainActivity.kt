@@ -3,9 +3,11 @@ package com.example.voicehelper
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
 import android.view.View
@@ -17,9 +19,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
+import com.android.volley.Request
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.example.voicehelper.databinding.ActivityMainBinding
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 
@@ -44,7 +50,15 @@ class MainActivity : AppCompatActivity() {
         requestMicrophonePermission()
         speechRecognizerListener()
         registerForActivityResultLauncher()
-        viewModel.animateText(binding.textView)
+        viewModel.animateText(binding.textView, "Hello, user \nCan I help you?")
+        binding.textView.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/"))
+            try {
+                startActivity(intent)
+            } catch (e: java.lang.Exception){
+                Toast.makeText(this, "1", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun registerForActivityResultLauncher() {
@@ -136,6 +150,20 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
+
+                    weather.all { weather -> weather in text.lowercase() } -> getWeather(text.lowercase())
+
+                    open.any { open -> youtube.any { youtube -> "$open $youtube" in text.lowercase()} }
+                    -> viewModel.openApp(this@MainActivity, "https://www.youtube.com")
+
+                    open.any { open -> tiktok.any { tiktok -> "$open $tiktok" in text.lowercase()} }
+                    -> viewModel.openApp(this@MainActivity, "https://www.tiktok.com")
+
+                    open.any { open -> browser.any { browser -> "$open $browser" in text.lowercase()} }
+                    -> viewModel.openApp(this@MainActivity, "https://www.google.com")
+
+                    open.any { open -> settings.any { settings -> "$open $settings" in text.lowercase()} }
+                    -> startActivity(Intent(Settings.ACTION_SETTINGS))
 
                     else -> getAnswerInOpenAI(text)
                 }
@@ -233,24 +261,48 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getAnswerInOpenAI(text: String) {
+        binding.inputText.isVisible = true
+        binding.inputText.text = "Writing..."
         GlobalScope.launch {
-            val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI))
+            val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI), binding)
             if (answer != "false")
             {
                 runOnUiThread {
                     viewModel.speak(answer)
                     binding.inputText.text = answer
                     binding.inputText.isVisible = true
+                    viewModel.animateText(binding.inputText, answer)
                 }
             }
             else {
                 runOnUiThread {
+                    binding.inputText.text = ""
                     Toast.makeText(this@MainActivity,
                         "Что-то пошло не так, повторите пожалуйста запрос позже", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
+
+    private fun getWeather(text: String) {
+        val city = viewModel.getCity(text)
+        val url = "https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=" +
+                "${resources.getString(R.string.API_KEY_WEATHER)}&units=metric"
+        val queue = Volley.newRequestQueue(this)
+
+        val stringRequest = StringRequest(Request.Method.POST, url,
+            { response ->
+                val resultTemp = JSONObject(response).getJSONObject("main").getString("temp")
+                val resultWeather = JSONObject(response).getJSONArray("weather").getJSONObject(0).getString("description")
+                binding.inputText.text = "Tempeture: $resultTemp. Weather: $resultWeather."
+                viewModel.speak("Tempeture: $resultTemp. Weather: $resultWeather.")
+            },
+            {
+                Toast.makeText(this, "Sorry, there was an error, repeat later", Toast.LENGTH_SHORT).show()
+            })
+        queue.add(stringRequest)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         viewModel.stopMusic()

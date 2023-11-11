@@ -1,9 +1,11 @@
 package com.example.voicehelper
 
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
@@ -16,10 +18,8 @@ import android.text.style.StyleSpan
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import com.example.voicehelper.databinding.ActivityMainBinding
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -32,11 +32,11 @@ import java.net.URL
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-class ViewModel() {
+class ViewModel {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
     private val text = SpannableString("Hello, user \nCan I help you?")
-    private val animator = ObjectAnimator.ofInt(0, text.length)
+    private lateinit var animator: ValueAnimator
 
     fun intentFromMicrophone(): Intent {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -46,12 +46,14 @@ class ViewModel() {
         return intent
     }
 
-    fun animateText(textView: TextView) {
-        text.setSpan(StyleSpan(Typeface.BOLD), 19, text.length, 0)
+    fun animateText(textView: TextView, text: String) {
+        val txt = SpannableString(text)
+        animator = ObjectAnimator.ofInt(0, txt.length)
+        txt.setSpan(StyleSpan(Typeface.BOLD), 19, text.length, 0)
         animator.duration = 2000
         animator.addUpdateListener { animation ->
             val animatedValue = animation.animatedValue as Int
-            textView.text = text.subSequence(0, animatedValue)
+            textView.text = txt.subSequence(0, animatedValue)
         }
         animator.start()
     }
@@ -151,22 +153,21 @@ class ViewModel() {
         val cameraId = cameraManager.cameraIdList[0]
         cameraManager.setTorchMode(cameraId, status)
     }
-    fun createAnswer(text: String, apiKeyOpenAI: String): String {
-            try {
-                val httpClient = OkHttpClient.Builder()
-                    .callTimeout(180, TimeUnit.SECONDS)
-                    .readTimeout(180, TimeUnit.SECONDS)
-                    .writeTimeout(180, TimeUnit.SECONDS)
-                    .build()
-                val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
+    fun createAnswer(text: String, apiKeyOpenAI: String, binding: ActivityMainBinding): String {
+        val httpClient = OkHttpClient.Builder()
+            .callTimeout(180, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .writeTimeout(180, TimeUnit.SECONDS)
+            .build()
+        val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
                      "You are a helpful assistant."},{"role": "user", "content": "$text"}]}""".trimIndent()
-                val request = Request.Builder()
-                    .url(API_URL).post(requestBody.toRequestBody("application/json".toMediaType()))
-                    .header("Authorization", "Bearer $apiKeyOpenAI")
-                    .build()
-                val response = httpClient.newCall(request).execute()
-                val responseBody = response.body?.string()
-
+        val request = Request.Builder()
+            .url(API_URL_OPEN_AI).post(requestBody.toRequestBody("application/json".toMediaType()))
+            .header("Authorization", "Bearer $apiKeyOpenAI")
+            .build()
+        val response = httpClient.newCall(request).execute()
+        val responseBody = response.body?.string()
+            try {
                 if (response.isSuccessful) {
                     val responseJSON = JSONObject(responseBody)
                     val answer = responseJSON.getJSONArray("choices")
@@ -181,4 +182,20 @@ class ViewModel() {
                 return "false"
             }
     }
+
+    fun getCity(text: String): String {
+        var city = ""
+        WordLibrary().weather.forEach {
+            if (it in text)
+            city = text.replace("$it ", "")
+        }
+        return city
+    }
+
+    fun openApp(context: Context, uri: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+        context.startActivity(intent)
+    }
+
+
 }
