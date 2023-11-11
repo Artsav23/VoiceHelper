@@ -151,7 +151,7 @@ class MainActivity : AppCompatActivity() {
 
                     gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
 
-                    weather.all { weather -> weather in text.lowercase() } -> weather(text.lowercase())
+                    weather.any { weather -> weather in text.lowercase() } -> weather(text.lowercase())
 
                     open.any { open -> youtube.any { youtube -> "$open $youtube" in text.lowercase()} }
                     -> viewModel.openApp(this@MainActivity, "https://www.youtube.com")

@@ -17,6 +17,7 @@ import android.text.style.StyleSpan
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
@@ -208,7 +209,8 @@ class ViewModel {
                 val resultTemp = JSONObject(response).getJSONObject("main").getString("temp")
                 val resultWeather = JSONObject(response).getJSONArray("weather").getJSONObject(0).getString("description")
                 inputText.text = "Tempeture: $resultTemp. Weather: $resultWeather."
-                speak("Tempeture: $resultTemp. Weather: $resultWeather.")
+                inputText.isVisible = true
+                speak("Температура $resultTemp градуса. Одевайтесь по погоде.")
             },
             { speak("Sorry, there was an error, repeat later")})
         return  stringRequest
