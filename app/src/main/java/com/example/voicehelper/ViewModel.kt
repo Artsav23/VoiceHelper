@@ -5,7 +5,6 @@ import android.animation.ValueAnimator
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
@@ -18,6 +17,8 @@ import android.text.style.StyleSpan
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.example.voicehelper.databinding.ActivityMainBinding
 import okhttp3.MediaType.Companion.toMediaType
@@ -167,6 +168,7 @@ class ViewModel {
             .build()
         val response = httpClient.newCall(request).execute()
         val responseBody = response.body?.string()
+
             try {
                 if (response.isSuccessful) {
                     val responseJSON = JSONObject(responseBody)
@@ -197,5 +199,18 @@ class ViewModel {
         context.startActivity(intent)
     }
 
-
+    fun getWeather(text: String, apiKey: String, inputText: TextView): StringRequest {
+        val city = getCity(text)
+        val url = "https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric"
+        val stringRequest = StringRequest(
+            com.android.volley.Request.Method.POST, url,
+            { response ->
+                val resultTemp = JSONObject(response).getJSONObject("main").getString("temp")
+                val resultWeather = JSONObject(response).getJSONArray("weather").getJSONObject(0).getString("description")
+                inputText.text = "Tempeture: $resultTemp. Weather: $resultWeather."
+                speak("Tempeture: $resultTemp. Weather: $resultWeather.")
+            },
+            { speak("Sorry, there was an error, repeat later")})
+        return  stringRequest
+    }
 }

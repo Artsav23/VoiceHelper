@@ -151,7 +151,7 @@ class MainActivity : AppCompatActivity() {
 
                     gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
 
-                    weather.all { weather -> weather in text.lowercase() } -> getWeather(text.lowercase())
+                    weather.all { weather -> weather in text.lowercase() } -> weather(text.lowercase())
 
                     open.any { open -> youtube.any { youtube -> "$open $youtube" in text.lowercase()} }
                     -> viewModel.openApp(this@MainActivity, "https://www.youtube.com")
@@ -284,23 +284,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getWeather(text: String) {
-        val city = viewModel.getCity(text)
-        val url = "https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=" +
-                "${resources.getString(R.string.API_KEY_WEATHER)}&units=metric"
+    private fun weather(text: String) {
         val queue = Volley.newRequestQueue(this)
-
-        val stringRequest = StringRequest(Request.Method.POST, url,
-            { response ->
-                val resultTemp = JSONObject(response).getJSONObject("main").getString("temp")
-                val resultWeather = JSONObject(response).getJSONArray("weather").getJSONObject(0).getString("description")
-                binding.inputText.text = "Tempeture: $resultTemp. Weather: $resultWeather."
-                viewModel.speak("Tempeture: $resultTemp. Weather: $resultWeather.")
-            },
-            {
-                Toast.makeText(this, "Sorry, there was an error, repeat later", Toast.LENGTH_SHORT).show()
-            })
-        queue.add(stringRequest)
+        queue.add(viewModel.getWeather(text,resources.getString(R.string.API_KEY_WEATHER), binding.inputText))
     }
 
     override fun onDestroy() {
