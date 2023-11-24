@@ -38,13 +38,23 @@ class AnswerAdapter: RecyclerView.Adapter<AnswerAdapter.ViewHolder>(), OnDeleteC
         answer.add(questionAndAnswer)
         notifyDataSetChanged()
     }
-    fun getAnswerList(): MutableList<QuestionAndAnswerDataClass> {
+    fun addAll(questionAndAnswer: MutableList<QuestionAndAnswerDataClass>) {
+        questionAndAnswer.forEach {
+            answer.add(it)
+        }
+        notifyDataSetChanged()
+    }
+    fun getList(): MutableList<QuestionAndAnswerDataClass> {
         return answer
     }
 
     override fun onDeleteClick(position: Int) {
         answer.removeAt(position)
         notifyDataSetChanged()
+    }
+
+    fun clear() {
+        answer.clear()
     }
 }
 interface OnDeleteClickListener {

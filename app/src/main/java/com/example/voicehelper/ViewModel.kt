@@ -14,12 +14,12 @@ import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.text.SpannableString
 import android.text.style.StyleSpan
+import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.example.voicehelper.databinding.ActivityMainBinding
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
 class ViewModel {
     private var mediaPlayer = MediaPlayer()
     private lateinit var textToSpeech: TextToSpeech
-    private val text = SpannableString("Hello, user \nCan I help you?")
+    private var isFlashingOn = false
     private lateinit var animator: ValueAnimator
 
     fun intentFromMicrophone(): Intent {
@@ -65,10 +65,11 @@ class ViewModel {
         animator.cancel()
     }
 
-    fun playMusic(context: Context) {
+    fun playMusic(context: Context, pauseMusic: ImageView) {
         val musicList = arrayListOf(R.raw.sound0, R.raw.sound1, R.raw.sound2, R.raw.sound3, R.raw.sound4)
         mediaPlayer = MediaPlayer.create(context, musicList.random())
         mediaPlayer.start()
+        pauseMusic.isVisible = true
     }
 
     fun initTextToSpeech(context: Context) {
@@ -82,17 +83,22 @@ class ViewModel {
     fun speak(text: String) {
         textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
+
     fun stopSpeak() {
+        if (textToSpeech.isSpeaking)
         textToSpeech.stop()
     }
 
     fun stopMusic() {
+        if (mediaPlayer.isPlaying)
         mediaPlayer.stop()
     }
 
-    fun stopAll(context: Context) {
+    fun stopAll(context: Context, pauseMusic: ImageView) {
         turnFlashLight(context, false)
+        pauseMusic.isVisible = false
         stopMusic()
+        stopSpeak()
     }
 
     fun searchWithInternet(text: String): Intent {
@@ -151,27 +157,38 @@ class ViewModel {
     }
 
     fun turnFlashLight(context: Context, status: Boolean) {
-        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val cameraId = cameraManager.cameraIdList[0]
-        cameraManager.setTorchMode(cameraId, status)
+        if (isFlashingOn != status) {
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList[0]
+            cameraManager.setTorchMode(cameraId, status)
+            isFlashingOn = status
+        }
     }
-    fun createAnswer(text: String, apiKeyOpenAI: String, binding: ActivityMainBinding): String {
+    fun createAnswer(text: String, apiKeyOpenAI: String): String {
         val httpClient = OkHttpClient.Builder()
             .callTimeout(180, TimeUnit.SECONDS)
             .readTimeout(180, TimeUnit.SECONDS)
             .writeTimeout(180, TimeUnit.SECONDS)
             .build()
-        val requestBody = """{ "model": "gpt-3.5-turbo", "messages": [ {"role": "system", "content":
-                     "You are a helpful assistant."},{"role": "user", "content": "$text"}]}""".trimIndent()
+
+        val requestBody = """{ 
+        "model": "gpt-3.5-turbo", 
+        "messages": [ 
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "$text"}
+        ]
+    }""".trimIndent()
+
         val request = Request.Builder()
-            .url(API_URL_OPEN_AI).post(requestBody.toRequestBody("application/json".toMediaType()))
+            .url(API_URL_OPEN_AI)
+            .post(requestBody.toRequestBody("application/json".toMediaType()))
             .header("Authorization", "Bearer $apiKeyOpenAI")
             .build()
-        val response = httpClient.newCall(request).execute()
-        val responseBody = response.body?.string()
 
+        httpClient.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string()
             try {
-                if (response.isSuccessful) {
+                if (response.isSuccessful && responseBody != null) {
                     val responseJSON = JSONObject(responseBody)
                     val answer = responseJSON.getJSONArray("choices")
                         .getJSONObject(0)
@@ -179,14 +196,17 @@ class ViewModel {
                         .getString("content")
                     return answer
                 } else {
+                    Log.d("my_log", "Request failed with code: ${response.code}, body: $responseBody")
                     return "false"
                 }
             } catch (e: Exception) {
+                Log.d("my_log", "Exception during processing: ${e.message}")
                 return "false"
             }
+        }
     }
 
-    fun getCity(text: String): String {
+    private fun getCity(text: String): String {
         var city = ""
         WordLibrary().weather.forEach {
             if (it in text)

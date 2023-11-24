@@ -51,5 +51,5 @@ dependencies {
 
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     implementation 'com.squareup.okhttp3:okhttp:4.9.1'
-    implementation "com.github.kittinunf.fuel:fuel:2.3.1"
+    implementation 'com.google.code.gson:gson:2.8.9'
 }

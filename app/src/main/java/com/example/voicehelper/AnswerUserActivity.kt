@@ -1,7 +1,7 @@
 package com.example.voicehelper
 
+import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.Color
@@ -10,33 +10,27 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.ContextMenu
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
-import android.view.Window
 import android.view.WindowManager
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.voicehelper.databinding.ActivityAnswerUserBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.io.Serializable
 
 class AnswerUserActivity : AppCompatActivity(), DialogCallBack {
 
     private lateinit var binding: ActivityAnswerUserBinding
     private val adapter = AnswerAdapter()
-
+    private var mutableListDataClass = mutableListOf<QuestionAndAnswerDataClass>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAnswerUserBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        loadData()
         binding.rcView.adapter = adapter
         binding.rcView.layoutManager = LinearLayoutManager(this)
-
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
@@ -46,7 +40,9 @@ class AnswerUserActivity : AppCompatActivity(), DialogCallBack {
             R.id.add -> showQuestionAnswerDialog()
             android.R.id.home -> {
                 val intent = Intent()
-                intent.putExtra("mutableList", adapter.getAnswerList() as Serializable)
+                mutableListDataClass = adapter.getList()
+                saveData()
+                intent.putExtra("mutableList", mutableListDataClass as Serializable)
                 setResult(RESULT_OK, intent)
                 finish()
             }
@@ -78,4 +74,30 @@ class AnswerUserActivity : AppCompatActivity(), DialogCallBack {
         val questionAndAnswer = QuestionAndAnswerDataClass(question = question, answer = answer)
         adapter.add(questionAndAnswer)
     }
+
+    override fun onPause() {
+        super.onPause()
+        saveData()
+    }
+
+    private fun saveData() {
+        val gson = Gson()
+        mutableListDataClass = adapter.getList()
+        val json = gson.toJson(mutableListDataClass)
+        val sharedPreferences = this.getSharedPreferences("QuestionAndAnswer", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("QA", json).apply()
+    }
+
+    private fun loadData() {
+        val gson = Gson()
+        val sharedPreferences = this.getSharedPreferences("QuestionAndAnswer", Context.MODE_PRIVATE)
+        val type = object : TypeToken<MutableList<QuestionAndAnswerDataClass>>() {}.type
+        val json = sharedPreferences.getString("QA", null)
+        adapter.clear()
+        mutableListDataClass = gson.fromJson(json, type) ?: mutableListOf()
+        mutableListDataClass
+            adapter.addAll(mutableListDataClass)
+    }
 }
+

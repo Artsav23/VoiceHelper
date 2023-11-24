@@ -1,9 +1,9 @@
 package com.example.voicehelper
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
@@ -19,20 +19,20 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
-import com.android.volley.Request
-import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.voicehelper.databinding.ActivityMainBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.json.JSONObject
+import java.io.Serializable
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var viewModel: ViewModel
+    private val viewModel = ViewModel()
     private lateinit var handler: Handler
     private lateinit var launcher: ActivityResultLauncher<Intent>
     private val wordLibrary = WordLibrary()
@@ -44,21 +44,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        viewModel = ViewModel()
+        init()
+    }
+
+    private fun init() {
         viewModel.initTextToSpeech(context = this)
         handler = viewModel.createHandler(this, binding.imageView)
         requestMicrophonePermission()
         speechRecognizerListener()
         registerForActivityResultLauncher()
         viewModel.animateText(binding.textView, "Hello, user \nCan I help you?")
-        binding.textView.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/"))
-            try {
-                startActivity(intent)
-            } catch (e: java.lang.Exception){
-                Toast.makeText(this, "1", Toast.LENGTH_SHORT).show()
-            }
-        }
+        listCommand = loadData()
     }
 
     private fun registerForActivityResultLauncher() {
@@ -81,7 +77,7 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
             if (grantResults.isEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED)
-                Toast.makeText(this, "Разрешите доступ к микрофону", Toast.LENGTH_SHORT).show()
+                takeMessage("Разрешите доступ к микрофону")
         }
     }
 
@@ -99,11 +95,7 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
-            override fun onError(error: Int) {
-                binding.lineSound.isInvisible = true
-                binding.buttonSoundView.isInvisible = true
-                stoppedListen = false
-            }
+            override fun onError(error: Int) { animateVisibleFalse() }
 
             override fun onResults(results: Bundle?) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -111,9 +103,7 @@ class MainActivity : AppCompatActivity() {
                     commands(text[0])
                     binding.textView.text = text[0].capitalize()
                 }
-                binding.lineSound.isInvisible = true
-                binding.buttonSoundView.isInvisible = true
-                stoppedListen = false
+                animateVisibleFalse()
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -123,6 +113,12 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
+    }
+
+    private fun animateVisibleFalse() {
+        binding.lineSound.isInvisible = true
+        binding.buttonSoundView.isInvisible = true
+        stoppedListen = false
     }
 
     private fun commands(text: String) {
@@ -142,12 +138,11 @@ class MainActivity : AppCompatActivity() {
 
                     greeting.any { greeting -> greeting == text.lowercase() }  -> bye()
 
-                    music.any { music -> wordLibrary.play.any { play -> "$play $music" in text.lowercase() }} -> playMusic()
+                    music.any { music -> wordLibrary.play.any { play -> "$play $music" in text.lowercase() }} ->
+                        viewModel.playMusic(context = this@MainActivity, binding.pauseMusic)
 
-                    stop.any { stop -> stop in text.lowercase() } -> {
-                        viewModel.stopAll(this@MainActivity)
-                        binding.pauseMusic.isVisible = false
-                    }
+                    stop.any { stop -> stop in text.lowercase() } ->
+                        viewModel.stopAll(this@MainActivity, binding.pauseMusic)
 
                     gif.any { gif -> gif in text.lowercase() } -> showGif(text.lowercase())
 
@@ -173,6 +168,7 @@ class MainActivity : AppCompatActivity() {
             stoppedListen = true
         }
     }
+
     private fun answerUserQuestion(text: String): Boolean {
         var flag = false
             for (i in 0 until listCommand.count()) {
@@ -186,10 +182,6 @@ class MainActivity : AppCompatActivity() {
             }
         return flag
     }
-    private fun playMusic() {
-        viewModel.playMusic(context = this)
-        binding.pauseMusic.isVisible = true
-    }
 
     private fun findWithGoogle(text: String) {
         viewModel.speak("Вот что нашлось по вашему запросу")
@@ -198,8 +190,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun bye() {
         viewModel.speak("Пока")
-        sleep(500)
+        sleep(600)
         finish()
+
     }
 
     private fun showGif(text: String) {
@@ -232,7 +225,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(viewModel.searchWithInternetCompat(text))
         }
         catch (e: Exception) {
-            Toast.makeText(this, "Internet connection error", Toast.LENGTH_SHORT).show()
+            takeMessage("Internet connection error")
         }
     }
 
@@ -264,7 +257,7 @@ class MainActivity : AppCompatActivity() {
         binding.inputText.isVisible = true
         binding.inputText.text = "Writing..."
         GlobalScope.launch {
-            val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI), binding)
+            val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI))
             if (answer != "false")
             {
                 runOnUiThread {
@@ -277,8 +270,7 @@ class MainActivity : AppCompatActivity() {
             else {
                 runOnUiThread {
                     binding.inputText.text = ""
-                    Toast.makeText(this@MainActivity,
-                        "Что-то пошло не так, повторите пожалуйста запрос позже", Toast.LENGTH_SHORT).show()
+                    takeMessage("Что-то пошло не так, повторите пожалуйста запрос позже")
                 }
             }
         }
@@ -289,8 +281,23 @@ class MainActivity : AppCompatActivity() {
         queue.add(viewModel.getWeather(text,resources.getString(R.string.API_KEY_WEATHER), binding.inputText))
     }
 
+    private fun takeMessage(text: String) {
+        Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.stopAll(this, binding.pauseMusic)
+    }
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.stopMusic()
+        viewModel.stopAll(this, binding.pauseMusic)
+    }
+    private fun loadData(): MutableList<QuestionAndAnswerDataClass> {
+        val gson = Gson()
+        val sharedPreferences = this.getSharedPreferences("QuestionAndAnswer", Context.MODE_PRIVATE)
+        val type = object : TypeToken<MutableList<QuestionAndAnswerDataClass>>() {}.type
+        val json = sharedPreferences.getString("QA", null)
+        return gson.fromJson(json, type) ?: mutableListOf()
     }
 }
