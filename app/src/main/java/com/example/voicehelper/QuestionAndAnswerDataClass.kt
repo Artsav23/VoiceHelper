@@ -5,5 +5,6 @@ import java.io.Serializable
 
 data class QuestionAndAnswerDataClass(
     var question: String,
-    var answer: String
+    var answer: String,
+    var turnFlash: Boolean = false
 ) : Serializable

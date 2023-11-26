@@ -11,7 +11,7 @@ class StartActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_start)
         thread {
-            Thread.sleep(3000)
+            Thread.sleep(2000)
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         }

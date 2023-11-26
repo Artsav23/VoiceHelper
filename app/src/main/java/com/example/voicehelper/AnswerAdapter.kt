@@ -3,6 +3,9 @@ package com.example.voicehelper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.Animation.AnimationListener
+import android.view.animation.AnimationUtils
 import androidx.recyclerview.widget.RecyclerView
 import com.example.voicehelper.databinding.ActivityItemBinding
 
@@ -16,9 +19,20 @@ class AnswerAdapter: RecyclerView.Adapter<AnswerAdapter.ViewHolder>(), OnDeleteC
         fun bind(position: Int) {
             binding.answer.text = "Answer: " + answer[position].answer
             binding.question.text = "Question: " + answer[position].question
-            binding.deleteButton.setOnClickListener {
-                listener.onDeleteClick(position)
-            }
+            binding.deleteButton.setOnClickListener { setRemoveAnimator(position) }
+        }
+        private fun setRemoveAnimator(position: Int) {
+            val loadAnimation = AnimationUtils.loadAnimation(itemView.context, R.anim.slide_out_left)
+            loadAnimation.setAnimationListener(object : AnimationListener{
+                override fun onAnimationStart(p0: Animation?) {}
+
+                override fun onAnimationEnd(p0: Animation?) {
+                    listener.onDeleteClick(position)
+                }
+
+                override fun onAnimationRepeat(p0: Animation?) {}
+            })
+            itemView.startAnimation(loadAnimation)
         }
     }
 
