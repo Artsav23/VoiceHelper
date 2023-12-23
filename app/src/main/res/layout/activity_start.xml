@@ -56,4 +56,5 @@
         app:layout_constraintTop_toTopOf="@+id/textView2"
         app:layout_constraintVertical_bias="0.41000003"
         app:srcCompat="@drawable/speaker" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

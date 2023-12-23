@@ -23,11 +23,17 @@ import com.android.volley.toolbox.Volley
 import com.example.voicehelper.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.Serializable
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
+import kotlin.coroutines.CoroutineContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         init()
+        getAnswerInOpenAI(" Hello My Friend")
     }
 
     private fun init() {
@@ -249,18 +256,18 @@ class MainActivity : AppCompatActivity() {
         binding.pauseMusic.isVisible = false
         viewModel.stopMusic()
     }
-    fun onClickAddAnswer(view: View) {
-        launcher.launch(Intent(this, AnswerUserActivity::class.java))
-    }
+    fun onClickAddAnswer(view: View) = launcher.launch(Intent(this, AnswerUserActivity::class.java))
+
 
     private fun getAnswerInOpenAI(text: String) {
         binding.inputText.isVisible = true
         binding.inputText.text = "Writing..."
-        GlobalScope.launch {
+        val scope = CoroutineScope(Dispatchers.IO)
+        scope.launch {
             val answer = viewModel.createAnswer(text, resources.getString(R.string.API_KEY_OPEN_AI))
             if (answer != "false")
             {
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     viewModel.speak(answer)
                     binding.inputText.text = answer
                     binding.inputText.isVisible = true
@@ -268,7 +275,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             else {
-                runOnUiThread {
+
+                withContext(Dispatchers.Main) {
                     binding.inputText.text = ""
                     takeMessage("Что-то пошло не так, повторите пожалуйста запрос позже")
                 }
@@ -281,9 +289,8 @@ class MainActivity : AppCompatActivity() {
         queue.add(viewModel.getWeather(text,resources.getString(R.string.API_KEY_WEATHER), binding.inputText))
     }
 
-    private fun takeMessage(text: String) {
-        Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
-    }
+    private fun takeMessage(text: String) = Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
+
 
     override fun onPause() {
         super.onPause()
@@ -291,6 +298,7 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
         viewModel.stopAll(this, binding.pauseMusic)
     }
     private fun loadData(): MutableList<QuestionAndAnswerDataClass> {

@@ -14,7 +14,7 @@ import com.example.voicehelper.databinding.ActivityDialogQuestionAnswerBinding
 class DialogQuestionAnswer (context: Context) : Dialog(context) {
     private var binding: ActivityDialogQuestionAnswerBinding = ActivityDialogQuestionAnswerBinding.inflate(layoutInflater)
     private var callBack : DialogCallBack? = null
-    private var functionList = false
+    private var functionListVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,28 +25,26 @@ class DialogQuestionAnswer (context: Context) : Dialog(context) {
 
     private fun functionTextListener() {
         binding.functionText.setOnClickListener {
-            if (functionList) {
+            if (functionListVisible) {
                 val animation = createAnimation({}, {binding.functionList.isGone = true}, R.anim.close_fuction_list)
-                changeList(R.drawable.drop_down,animation)
+                changeList(R.drawable.drop_down, animation)
             }
             else {
                  val animation = createAnimation({binding.functionList.isVisible = true}, {}, R.anim.open_function_list)
                 changeList(R.drawable.drop_up, animation)
             }
-            functionList = !functionList
+            functionListVisible = !functionListVisible
         }
     }
 
     private fun createAnimation(openFunction: () -> Unit, closeFunction: () -> Unit, anim: Int): Animation {
         val loadAnimation = AnimationUtils.loadAnimation(context, anim)
         loadAnimation.setAnimationListener(object : AnimationListener {
-            override fun onAnimationStart(p0: Animation?) {
-                openFunction()
-            }
-            override fun onAnimationEnd(p0: Animation?) {
-                closeFunction()
-            }
             override fun onAnimationRepeat(p0: Animation?) {}
+
+            override fun onAnimationStart(p0: Animation?) = openFunction()
+
+            override fun onAnimationEnd(p0: Animation?) = closeFunction()
         })
         return loadAnimation
     }
@@ -63,18 +61,15 @@ class DialogQuestionAnswer (context: Context) : Dialog(context) {
                 callBack?.onDataEntered(binding.questionEditText.text.toString(), binding.answerEditText.text.toString())
                 dismiss()
             }
-            else
-                binding.textViewReminder.isVisible = true
+            else binding.textViewReminder.isVisible = true
         }
     }
     fun setCallBack (callBack: DialogCallBack) {
         this.callBack = callBack
     }
 
-    private fun checkText(): Boolean {
-        return !binding.answerEditText.text.isNullOrEmpty() &&
+    private fun checkText(): Boolean = !binding.answerEditText.text.isNullOrEmpty() &&
                 !binding.questionEditText.text.isNullOrEmpty()
-    }
 }
 
 interface DialogCallBack {

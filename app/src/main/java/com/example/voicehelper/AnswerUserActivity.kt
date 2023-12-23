@@ -97,7 +97,7 @@ class AnswerUserActivity : AppCompatActivity(), DialogCallBack {
         adapter.clear()
         mutableListDataClass = gson.fromJson(json, type) ?: mutableListOf()
         mutableListDataClass
-            adapter.addAll(mutableListDataClass)
+        adapter.addAll(mutableListDataClass)
     }
 }
 

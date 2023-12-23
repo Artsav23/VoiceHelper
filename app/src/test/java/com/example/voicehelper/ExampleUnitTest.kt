@@ -1,5 +1,11 @@
 package com.example.voicehelper
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -8,6 +14,7 @@ import org.json.JSONObject
 import org.junit.Test
 
 import org.junit.Assert.*
+import java.util.concurrent.Flow
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -57,34 +64,26 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun minFun() {
-        val input = readLine()!!.split(" ").map { it.toInt() }
-        val n = input[0]
-        val t = input[1]
-
-        var minJoy = Int.MAX_VALUE
-
-        repeat(n) {
-            val k = readLine()!!.toInt()
-            val gifts = readLine()!!.split(" ").map { it.toInt() }
-
-            val sortedGifts = gifts.sorted()
-
-            var totalCost = 0
-            var totalJoy = 0
-
-            for (i in 0 until k) {
-                if (totalCost + sortedGifts[i] <= t) {
-                    totalCost += sortedGifts[i]
-                    totalJoy += sortedGifts[i]
-                } else {
-                    break
+    fun minFun() = runBlocking {
+            // Создаем простой flow, который отправляет числа от 1 до 5
+            val myFlow = flow {
+                for (i in 1..5) {
+                    delay(200) // Имитация работы
+                    emit(i)    // Отправляем значение в flow
                 }
             }
 
-            minJoy = minOf(minJoy, totalJoy)
-        }
+            // Используем операторы для манипуляции данными в потоке
+            myFlow
+                .map { it * 2 }          // Умножаем каждое значение на 2
+                .filter { it % 3 == 0 }  // Оставляем только значения, которые делятся на 3
+                .transform { value ->
 
-        println(minJoy)
+                    emit(value)
+                    emit(value + 1)
+                }
+                .collect { value ->
+                    println("Received: $value")
+                }
     }
 }

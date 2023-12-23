@@ -25,12 +25,9 @@ class AnswerAdapter: RecyclerView.Adapter<AnswerAdapter.ViewHolder>(), OnDeleteC
             val loadAnimation = AnimationUtils.loadAnimation(itemView.context, R.anim.slide_out_left)
             loadAnimation.setAnimationListener(object : AnimationListener{
                 override fun onAnimationStart(p0: Animation?) {}
-
-                override fun onAnimationEnd(p0: Animation?) {
-                    listener.onDeleteClick(position)
-                }
-
                 override fun onAnimationRepeat(p0: Animation?) {}
+
+                override fun onAnimationEnd(p0: Animation?) = listener.onDeleteClick(position)
             })
             itemView.startAnimation(loadAnimation)
         }
@@ -41,13 +38,10 @@ class AnswerAdapter: RecyclerView.Adapter<AnswerAdapter.ViewHolder>(), OnDeleteC
         return ViewHolder(inflater, this)
     }
 
-    override fun getItemCount(): Int {
-        return answer.count()
-    }
+    override fun getItemCount(): Int = answer.count()
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(position)
-    }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(position)
+
     fun add (questionAndAnswer: QuestionAndAnswerDataClass) {
         answer.add(questionAndAnswer)
         notifyDataSetChanged()
@@ -58,18 +52,15 @@ class AnswerAdapter: RecyclerView.Adapter<AnswerAdapter.ViewHolder>(), OnDeleteC
         }
         notifyDataSetChanged()
     }
-    fun getList(): MutableList<QuestionAndAnswerDataClass> {
-        return answer
-    }
+    fun getList(): MutableList<QuestionAndAnswerDataClass> = answer
+
 
     override fun onDeleteClick(position: Int) {
         answer.removeAt(position)
         notifyDataSetChanged()
     }
 
-    fun clear() {
-        answer.clear()
-    }
+    fun clear() = answer.clear()
 }
 interface OnDeleteClickListener {
     fun onDeleteClick(position: Int)

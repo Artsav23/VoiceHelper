@@ -164,7 +164,7 @@ class ViewModel {
             isFlashingOn = status
         }
     }
-    fun createAnswer(text: String, apiKeyOpenAI: String): String {
+    suspend fun createAnswer(text: String, apiKeyOpenAI: String): String {
         val httpClient = OkHttpClient.Builder()
             .callTimeout(180, TimeUnit.SECONDS)
             .readTimeout(180, TimeUnit.SECONDS)
