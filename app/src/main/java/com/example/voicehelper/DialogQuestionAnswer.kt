@@ -10,7 +10,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.example.voicehelper.databinding.ActivityDialogQuestionAnswerBinding
-
 class DialogQuestionAnswer (context: Context) : Dialog(context) {
     private var binding: ActivityDialogQuestionAnswerBinding = ActivityDialogQuestionAnswerBinding.inflate(layoutInflater)
     private var callBack : DialogCallBack? = null

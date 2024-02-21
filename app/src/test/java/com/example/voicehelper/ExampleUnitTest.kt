@@ -1,5 +1,6 @@
 package com.example.voicehelper
 
+import dalvik.annotation.TestTargetClass
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
@@ -26,9 +27,21 @@ class ExampleUnitTest {
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
     }
+    infix fun Int.myPlus(y: Int): Int {
+        return y * this
+    }
+
+    @Test
+    fun mn() {
+        val result = (3 myPlus 4) and 5
+        println(result)
+    }
+
+
 
     @Test
     fun chatGpt() {
+
         val apiKey = "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"
         val apiUrl = "https://api.openai.com/v1/chat/completions"
 

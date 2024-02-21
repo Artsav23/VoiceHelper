@@ -96,7 +96,6 @@ class AnswerUserActivity : AppCompatActivity(), DialogCallBack {
         val json = sharedPreferences.getString("QA", null)
         adapter.clear()
         mutableListDataClass = gson.fromJson(json, type) ?: mutableListOf()
-        mutableListDataClass
         adapter.addAll(mutableListDataClass)
     }
 }

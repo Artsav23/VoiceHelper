@@ -51,7 +51,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         init()
-        getAnswerInOpenAI(" Hello My Friend")
     }
 
     private fun init() {
